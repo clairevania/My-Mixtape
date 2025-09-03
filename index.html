@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mixtape Creator</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #f5f5f5;
+            font-family: 'Courier Prime', monospace;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(0deg, rgba(0,0,0,0.05) 1px, transparent 1px), 
+                        linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            opacity: 0.3;
+            z-index: 1;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 3;
+            margin-top: 50px;
+        }
+        
+        .header {
+            background: #8B4513;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 15px 15px 0 0;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .cassette {
+            width: 200px;
+            height: 120px;
+            background: linear-gradient(45deg, #333, #000);
+            border-radius: 10px;
+            margin: 20px auto;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .cassette-label {
+            background: white;
+            margin: 15px;
+            padding: 10px;
+            border-radius: 3px;
+            text-align: center;
+            color: black;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        
+        .cassette-body {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            height: 40px;
+        }
+        
+        .reel {
+            width: 25px;
+            height: 25px;
+            background: #ddd;
+            border-radius: 50%;
+            border: 3px solid #999;
+        }
+        
+        .tape-window {
+            flex: 1;
+            height: 15px;
+            margin: 0 10px;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+            border-radius: 2px;
+        }
+        
+        .form-section {
+            background: rgba(245, 241, 232, 0.9);
+            padding: 30px;
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .input-group {
+            margin-bottom: 25px;
+        }
+        
+        .input-group label {
+            display: block;
+            color: #8B4513;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #d4c5a9;
+            border-radius: 8px;
+            font-family: 'Courier Prime', monospace;
+            font-size: 1em;
+            background: rgba(255,255,255,0.8);
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #8B4513;
+            background: white;
+        }
+        
+        .track-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 8px;
+        }
+        
+        #tracksList {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+        
+        .track-number {
+            background: #8B4513;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        
+        .track-input {
+            flex: 1;
+            margin-right: 10px;
+        }
+        
+        .remove-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier Prime', monospace;
+        }
+        
+        .remove-btn:hover {
+            background: #c82333;
+        }
+        
+        .add-track-btn, .create-btn {
+            background: #8B4513;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-family: 'Courier Prime', monospace;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .add-track-btn:hover, .create-btn:hover {
+            background: #A0522D;
+            transform: translateY(-2px);
+        }
+        
+        .add-track-btn {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        
+        .create-btn {
+            width: 100%;
+            font-size: 1.3em;
+            padding: 18px;
+        }
+        
+        .player-section {
+            display: none;
+            position: relative;
+            z-index: 3;
+        }
+        
+        /* Authentic Mewtru Tape Deck Styling */
+        .tape-deck-handle {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translate(-50%, -40px);
+            width: 100%;
+            height: 56px;
+            z-index: 10;
+        }
+        
+        .handle-left, .handle-right {
+            position: absolute;
+            top: 32px;
+            width: 40px;
+            height: 24px;
+            background: #d5c4a7;
+            border: 2px solid #c4b396;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .handle-left {
+            left: 0;
+        }
+        
+        .handle-right {
+            right: 0;
+        }
+        
+        .handle-post-left, .handle-post-right {
+            position: absolute;
+            top: 0;
+            width: 20px;
+            height: 40px;
+            background: #e6d5b8;
+            border: 2px solid #d5c4a7;
+            border-radius: 8px 8px 0 0;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .handle-post-left {
+            left: 16px;
+        }
+        
+        .handle-post-right {
+            right: 16px;
+        }
+        
+        .handle-bar {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 40px);
+            height: 20px;
+            background: #8b4513;
+            border: 1px solid #5d4037;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .handle-bar-inner {
+            width: 95%;
+            height: 8px;
+            background: #a1887f;
+            border-radius: 20px;
+            opacity: 0.7;
+        }
+        
+        .handle-screws {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 50px);
+            height: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 8px;
+        }
+        
+        .handle-screw {
+            width: 2px;
+            height: 12px;
+            background: #5d4037;
+            border-radius: 2px;
+            opacity: 0.3;
+        }
+        
+        .tape-deck {
+            background: #f5e7c9;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e6d5b8;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            position: relative;
+        }
+        
+        .frequency-display {
+            width: 100%;
+            height: 40px;
+            background: #f0e0c0;
+            border-radius: 6px;
+            border: 1px solid #e6d5b8;
+            margin: 16px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .frequency-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #999;
+            transform: translateY(-50%);
+        }
+        
+        .frequency-markers {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0 16px;
+            position: absolute;
+            top: 4px;
+            font-size: 8px;
+            color: #666;
+        }
+        
+        .frequency-needle {
+            position: absolute;
+            top: 4px;
+            left: 40px;
+            height: 32px;
+            width: 4px;
+            background: #ff0000;
+            transform: translateY(-50%);
+        }
+        
+        .frequency-knob {
+            position: absolute;
+            top: 50%;
+            left: 42px;
+            width: 16px;
+            height: 16px;
+            background: #d5c4a7;
+            border: 1px solid #c4b396;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .cassette-compartment {
+            width: 100%;
+            height: 200px;
+            background: #e6d5b8;
+            border-radius: 6px;
+            border: 1px solid #d5c4a7;
+            margin-bottom: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .compartment-top {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 8px;
+            background: #d5c4a7;
+        }
+        
+        .cassette-in-deck {
+            position: absolute;
+            left: 50%;
+            top: 16px;
+            transform: translateX(-50%);
+            width: 256px;
+            height: 144px;
+            background: #000;
+            border-radius: 6px;
+            border: 1px solid #333;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            transition: all 1s ease-in-out;
+            z-index: 1; /* keep cassette lower than controls */
+        }
+        
+        .deck-cassette-corners {
+            position: absolute;
+        }
+        
+        .deck-cassette-corner {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+        }
+        
+        .deck-cassette-corner:nth-child(1) { top: 8px; left: 8px; }
+        .deck-cassette-corner:nth-child(2) { top: 8px; right: 8px; }
+        .deck-cassette-corner:nth-child(3) { bottom: 8px; left: 8px; }
+        .deck-cassette-corner:nth-child(4) { bottom: 8px; right: 8px; }
+        
+        .deck-cassette-label {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            right: 16px;
+            height: 56px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 2px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .deck-cassette-label::before,
+        .deck-cassette-label::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #ccc;
+        }
+        
+        .deck-cassette-label::before { top: 33%; }
+        .deck-cassette-label::after { top: 66%; }
+        
+        .deck-cassette-title {
+            font-size: 18px;
+            color: #333;
+            font-weight: bold;
+            font-style: italic;
+        }
+        
+        .deck-tape-colors {
+            position: absolute;
+            top: 80px;
+            left: 0;
+            right: 0;
+            height: 32px;
+            display: flex;
+        }
+        
+        .deck-tape-color {
+            flex: 1;
+            height: 100%;
+        }
+        
+        .deck-tape-color:nth-child(1) { background: #ff0000; }
+        .deck-tape-color:nth-child(2) { background: #ff69b4; }
+        .deck-tape-color:nth-child(3) { background: #ffff00; }
+        .deck-tape-color:nth-child(4) { background: #00ff00; }
+        .deck-tape-color:nth-child(5) { background: #0000ff; }
+        .deck-tape-color:nth-child(6) { background: #4b0082; }
+        
+        .deck-cassette-mechanics {
+            position: absolute;
+            bottom: 24px;
+            left: 0;
+            right: 0;
+            height: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 32px;
+        }
+        
+        .deck-reel {
+            width: 40px;
+            height: 40px;
+            background: #ddd;
+            border: 4px solid #000;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .deck-reel-center {
+            width: 24px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 50%;
+        }
+        
+        .deck-window {
+            width: 64px;
+            height: 32px;
+            background: #333;
+            border: 1px solid #666;
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .deck-window-inner {
+            width: 48px;
+            height: 16px;
+            background: white;
+            border-radius: 2px;
+        }
+        
+        .deck-side-label {
+            position: absolute;
+            bottom: 8px;
+            left: 24px;
+            background: #000;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 2px 4px;
+            border: 1px solid white;
+        }
+        
+        .insert-eject-btn {
+            position: absolute;
+            bottom: 12px;         /* slightly farther from edge for breathing room */
+            right: 12px;
+            background: #d5c4a7;
+            color: #333;
+            padding: 8px 12px;    /* a little larger touch target */
+            border-radius: 6px;
+            border: 1px solid #bcae8e;
+            cursor: pointer;
+            font-weight: 700;     /* <-- bold text */
+            z-index: 30;          /* <-- keep button on top of cassette */
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+        
+        .insert-eject-btn:hover {
+            background: #e6d5b8;
+        }
+
+        .insert-eject-btn {
+        margin-bottom: 8px; /* space between button and NO TAPE text */
+        }
+        
+       .speaker-grille{
+            width:100%;
+            height:4rem;               /* h-16 */
+            background: #e6d5b8;
+            border-radius: 0.375rem;   /* rounded-md */
+            border: 1px solid #d5c4a7;
+            margin-bottom: 1rem;
+            position: relative;
+            overflow: hidden;
+            padding: .5rem;            /* p-2 */
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: .25rem;               /* gap-1 */
+            align-items: center;
+            box-sizing: border-box;
+        }
+        
+       .speaker-grille .speaker-dot{
+            width: 100%;
+            height: 100%;
+            border-radius: 999px;
+            background: #d5c4a7;
+        }
+
+        
+       
+
+        
+    .status-display {
+    display: flex;
+    flex-direction: column;   /* stack children vertically */
+    align-items: center;      /* center horizontally */
+    justify-content: center;
+    padding: 8px;
+    }
+        
+        .status-text {
+            color: #666;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        
+        .status-light {
+            width: 12px;
+            height: 12px;
+            background: #00ff00;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #00ff00;
+        }
+        
+        .controls-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .transport-controls {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .control-btn {
+            width: 32px;
+            height: 32px;
+            background: #d5c4a7;
+            color: #666;
+            border: 1px solid #c4b396;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s ease;
+        }
+        
+        .control-btn:hover {
+            background: #e6d5b8;
+        }
+        
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .volume-knob {
+            width: 32px;
+            height: 32px;
+            background: #d5c4a7;
+            border: 1px solid #c4b396;
+            border-radius: 50%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .volume-knob::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #c4b396;
+            border-radius: 50%;
+        }
+        
+        .volume-knob::before {
+            content: '';
+            position: absolute;
+            width: 4px;
+            height: 8px;
+            background: #666;
+            z-index: 1;
+            transform: translateY(-4px);
+        }
+        
+        .vol-label {
+            font-size: 8px;
+            color: #666;
+            font-weight: bold;
+        }
+        
+        .track-info {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255,255,255,0.7);
+            border-radius: 8px;
+        }
+        
+        .track-title {
+            font-weight: bold;
+            color: #8B4513;
+            margin-bottom: 5px;
+        }
+        
+        .track-counter {
+            color: #666;
+        }
+        
+        .share-section {
+            text-align: center;
+            padding: 20px;
+            background: rgba(255,255,255,0.5);
+            margin-top: 20px;
+            border-radius: 8px;
+        }
+        
+        .share-url {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: 'Courier Prime', monospace;
+        }
+        
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier Prime', monospace;
+        }
+        
+        .copy-btn:hover {
+            background: #218838;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        @keyframes insertTape {
+            0% { transform: translateX(-50%) translateY(-20px); opacity: 0.5; }
+            100% { transform: translateX(-50%) translateY(0); opacity: 1; }
+        }
+        
+        .inserting {
+            animation: insertTape 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Make a Mixtape</h1>
+            <div class="cassette">
+                <div class="cassette-label" id="cassetteLabel">FOR YOU</div>
+                <div class="cassette-body">
+                    <div class="reel"></div>
+                    <div class="tape-window"></div>
+                    <div class="reel"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="createSection" class="form-section">
+            <div class="input-group">
+                <label>RECIPIENT NAME (OPTIONAL):</label>
+                <input type="text" id="recipientName" placeholder="who is this mixtape for?">
+                <small style="color: #8B4513; font-style: italic;">Leave blank for "For You"</small>
+            </div>
+            
+            <div class="input-group">
+                <label>ADD YOUTUBE LINKS:</label>
+                <div id="tracksList">
+                    <div class="track-item">
+                        <div class="track-number">1</div>
+                        <input type="url" class="track-input" placeholder="Paste YouTube URL here">
+                        <button class="remove-btn" onclick="removeTrack(this)" style="display: none;">×</button>
+                    </div>
+                </div>
+                <button class="add-track-btn" onclick="addTrack()" id="addTrackButton">ADD ANOTHER TRACK (1)</button>
+            </div>
+            
+            <button class="create-btn" onclick="createMixtape()">CREATE MIXTAPE ▶</button>
+        </div>
+        
+        <div id="playerSection" class="player-section">
+            <div class="tape-deck-handle">
+                <div class="handle-left"></div>
+                <div class="handle-right"></div>
+                <div class="handle-post-left"></div>
+                <div class="handle-post-right"></div>
+                <div class="handle-bar">
+                    <div class="handle-bar-inner"></div>
+                </div>
+                <div class="handle-screws">
+                    <div class="handle-screw"></div>
+                    <div class="handle-screw"></div>
+                    <div class="handle-screw"></div>
+                    <div class="handle-screw"></div>
+                    <div class="handle-screw"></div>
+                    <div class="handle-screw"></div>
+                    <div class="handle-screw"></div>
+                    <div class="handle-screw"></div>
+                    <div class="handle-screw"></div>
+                    <div class="handle-screw"></div>
+                    <div class="handle-screw"></div>
+                    <div class="handle-screw"></div>
+                    <div class="handle-screw"></div>
+                    <div class="handle-screw"></div>
+                    <div class="handle-screw"></div>
+                    <div class="handle-screw"></div>
+                </div>
+            </div>
+            
+            <div class="tape-deck">
+                <div class="frequency-display">
+                    <div class="frequency-line"></div>
+                    <div class="frequency-markers">
+                        <span>88</span>
+                        <span>92</span>
+                        <span>96</span>
+                        <span>100</span>
+                        <span>104</span>
+                        <span>108</span>
+                        <span>MHz</span>
+                    </div>
+                    <div class="frequency-needle"></div>
+                    <div class="frequency-knob"></div>
+                </div>
+                
+                <div class="cassette-compartment" id="cassetteCompartment">
+                    <div class="compartment-top"></div>
+                    <div id="cassetteInDeck" class="cassette cassette-in-deck" style="display: none;">
+    <div class="cassette-label" id="deckCassetteTitle">FOR YOU</div>
+    <div class="cassette-body">
+        <div class="reel"></div>
+        <div class="tape-window"></div>
+        <div class="reel"></div>
+    </div>
+</div>
+                    
+                </div>
+                
+                <div id="speakerGrill" class="speaker-grille">
+                        
+                </div>
+                
+                
+                <div class="status-display">
+                    <button class="insert-eject-btn" onclick="insertTape()" id="insertEjectBtn">INSERT</button>
+                    <div class="status-text" id="statusText">NO TAPE</div>
+                    <div class="status-light" id="statusLight" style="background: #ff0000; box-shadow: 0 0 8px #ff0000;"></div>
+                </div>
+                
+                <div class="controls-section">
+                    <div class="transport-controls">
+                        <button class="control-btn" onclick="previousTrack()" id="prevBtn" disabled>⏮</button>
+                        <button class="control-btn" onclick="togglePlay()" id="playBtn">▶</button>
+                        <button class="control-btn" onclick="nextTrack()" id="nextBtn" disabled>⏭</button>
+                    </div>
+                    
+                    <div class="volume-control">
+                        <div class="volume-knob"></div>
+                        <div class="vol-label">VOL</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="track-info hidden" id="trackInfo">
+                <div class="track-title" id="currentTrackTitle">-</div>
+                <div class="track-counter" id="trackCounter">TRACK 1/1</div>
+            </div>
+            
+            <div class="share-section">
+                <button class="create-btn" id="newMixBtn" onclick="window.location.href = window.location.origin + window.location.pathname;">
+                    CREATE A NEW MIX TAPE
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMixtape = {
+            recipient: '',
+            tracks: [],
+            currentTrack: 0,
+            isPlaying: false,
+            isInserted: false
+        };
+        
+        let trackCount = 1;
+        
+        // YouTube API Integration
+        let player = null;
+        let playerReady = false;
+        
+        // Load YouTube API
+        let ytScriptLoaded = false;
+        function loadYouTubeAPI() {
+            if (ytScriptLoaded) return;
+            ytScriptLoaded = true;
+            const tag = document.createElement('script');
+            tag.src = 'https://www.youtube.com/iframe_api';
+            const firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        }
+        
+        // YouTube API Ready
+        function onYouTubeIframeAPIReady() {
+            // called by the YouTube API when ready
+            playerReady = true;
+            // initialize player if a tape is already inserted
+            if (currentMixtape.isInserted) {
+                initializePlayer();
+            }
+        }
+        
+        function extractVideoId(url) {
+            try {
+                // quick attempt via URL parser
+                const u = new URL(url.replace(/^https?:\/\//, (m) => m)); // normalize
+                // standard watch?v=
+                if (u.searchParams && u.searchParams.get('v')) return u.searchParams.get('v');
+                // path-based ids: youtu.be/VIDEO, /embed/VIDEO, /v/VIDEO
+                const path = u.pathname.split('/').filter(Boolean);
+                const candidates = ['youtu.be', 'youtube.com', 'm.youtube.com', 'www.youtube.com', 'youtube-nocookie.com'];
+                if (path.length) {
+                    const maybe = path[path.length - 1];
+                    // if it's a pure id-ish token return it
+                    if (/^[A-Za-z0-9_-]{6,}$/.test(maybe)) return maybe;
+                }
+            } catch (e) {
+                // fall back to regex if URL parsing failed
+            }
+
+            // fallback regex to catch more variants
+            const regex = /(?:youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([^&?\/\n#]{6,})/i;
+            const m = url.match(regex);
+            return m ? m[1] : null;
+        }
+
+        
+        function addTrack() {
+            trackCount++;
+            
+            const tracksList = document.getElementById('tracksList');
+            const trackItem = document.createElement('div');
+            trackItem.className = 'track-item';
+            
+            trackItem.innerHTML = `
+                <div class="track-number">${trackCount}</div>
+                <input type="url" class="track-input" placeholder="Paste YouTube URL here">
+                <button class="remove-btn" onclick="removeTrack(this)">×</button>
+            `;
+            
+            tracksList.appendChild(trackItem);
+            updateAddButton();
+            updateRemoveButtons();
+            
+            trackItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        function removeTrack(button) {
+            if (trackCount <= 1) return;
+            
+            button.parentElement.remove();
+            trackCount--;
+            
+            const trackItems = document.querySelectorAll('.track-item');
+            trackItems.forEach((item, index) => {
+                item.querySelector('.track-number').textContent = index + 1;
+            });
+            
+            updateAddButton();
+            updateRemoveButtons();
+        }
+        
+        function updateAddButton() {
+            const addBtn = document.getElementById('addTrackButton');
+            addBtn.textContent = `ADD ANOTHER TRACK (${trackCount})`;
+        }
+        
+        function updateRemoveButtons() {
+            const removeButtons = document.querySelectorAll('.remove-btn');
+            removeButtons.forEach(btn => {
+                btn.style.display = trackCount > 1 ? 'block' : 'none';
+            });
+        }
+        
+        async function createMixtape() {
+    const recipientName = document.getElementById('recipientName').value.trim() || 'FOR YOU';
+    const trackInputs = document.querySelectorAll('.track-input');
+    const tracks = [];
+    
+    for (let input of trackInputs) {
+        if (input.value.trim()) {
+            const videoId = extractVideoId(input.value.trim());
+            if (videoId) {
+                tracks.push({
+                    videoId: videoId,
+                    url: input.value.trim(),
+                    title: `Track ${tracks.length + 1}`
+                });
+            }
+        }
+    }
+    
+    if (tracks.length === 0) {
+        alert('Please add at least one valid YouTube URL');
+        return;
+    }
+    
+    currentMixtape.recipient = recipientName;
+    currentMixtape.tracks = tracks;
+    currentMixtape.currentTrack = 0;
+    
+    document.getElementById('cassetteLabel').textContent = recipientName;
+    document.getElementById('deckCassetteTitle').textContent = recipientName.toUpperCase();
+    
+    generateShareUrl();
+
+    // ← ADD THIS LINE to hide the brown header after creating the mixtape
+    document.querySelector('.header').classList.add('hidden');
+    
+    document.getElementById('createSection').style.display = 'none';
+    document.getElementById('playerSection').style.display = 'block';
+    
+    if (!window.YT) {
+        loadYouTubeAPI();
+    }
+}
+
+        
+        function insertTape() {
+            if (currentMixtape.isInserted) return;
+
+            const cassetteInDeck = document.getElementById('cassetteInDeck');
+            const insertEjectBtn = document.getElementById('insertEjectBtn');
+            const statusText = document.getElementById('statusText');
+            const statusLight = document.getElementById('statusLight');
+            // const trackInfo = document.getElementById('trackInfo'); // no longer used for showing a box
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+
+            playInsertSound();
+
+            cassetteInDeck.classList.add('inserting');
+            setTimeout(() => cassetteInDeck.classList.remove('inserting'), 500);
+
+            cassetteInDeck.style.display = 'block';
+            insertEjectBtn.textContent = 'EJECT';
+            insertEjectBtn.onclick = ejectTape;
+
+            statusText.textContent = `TRACK 1/${currentMixtape.tracks.length}`;
+            statusLight.style.background = '#00ff00';
+            statusLight.style.boxShadow = '0 0 8px #00ff00';
+
+            // <-- DO NOT unhide the track-info panel here
+            // trackInfo.classList.remove('hidden');
+
+            prevBtn.disabled = false;
+            nextBtn.disabled = false;
+
+            currentMixtape.isInserted = true;
+            updateTrackInfo();
+
+            initializePlayer();
+        }
+
+        
+        function ejectTape() {
+            if (!currentMixtape.isInserted) return;
+            
+            const cassetteInDeck = document.getElementById('cassetteInDeck');
+            const insertEjectBtn = document.getElementById('insertEjectBtn');
+            const statusText = document.getElementById('statusText');
+            const statusLight = document.getElementById('statusLight');
+            const trackInfo = document.getElementById('trackInfo');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            playEjectSound();
+            
+            if (player && player.stopVideo) {
+                player.stopVideo();
+            }
+            
+            cassetteInDeck.style.display = 'none';
+            insertEjectBtn.textContent = 'INSERT';
+            insertEjectBtn.onclick = insertTape;
+            
+            statusText.textContent = 'NO TAPE';
+            statusLight.style.background = '#ff0000';
+            statusLight.style.boxShadow = '0 0 8px #ff0000';
+            
+            trackInfo.classList.add('hidden');
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
+            
+            currentMixtape.isInserted = false;
+            currentMixtape.isPlaying = false;
+            
+            document.getElementById('playBtn').textContent = '▶';
+        }
+        
+       function initializePlayer() {
+            if (!playerReady || !window.YT) {
+                // keep waiting until API is ready
+                setTimeout(initializePlayer, 100);
+                return;
+            }
+
+            // ensure a container div exists before calling YT.Player
+            let hiddenDiv = document.getElementById('hiddenPlayer');
+            if (!hiddenDiv) {
+                hiddenDiv = document.createElement('div');
+                hiddenDiv.id = 'hiddenPlayer';
+                hiddenDiv.style.display = 'none';
+                document.body.appendChild(hiddenDiv);
+            }
+
+            // destroy old player if any
+            if (player && player.destroy && typeof player.destroy === 'function') {
+                try { player.destroy(); } catch (e) { console.warn('Player destroy failed', e); }
+                player = null;
+            }
+
+            // create new player using the hidden div id
+            player = new YT.Player('hiddenPlayer', {
+                height: '0',
+                width: '0',
+                videoId: currentMixtape.tracks[currentMixtape.currentTrack]?.videoId || '',
+                playerVars: {
+                    'autoplay': 0,
+                    'controls': 0,
+                    'disablekb': 1,
+                    'fs': 0,
+                    'modestbranding': 1,
+                    'rel': 0
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange,
+                    'onError': onPlayerError
+                }
+            });
+        }
+        
+        
+        function onPlayerReady(event) {
+            console.log('YT player ready', event);
+            // keep the API player object as the YT-managed instance
+            player = event.target || player;
+            // if user expects playback immediately, start if flagged
+            if (currentMixtape.isPlaying) {
+                try { player.playVideo(); } catch(e) { console.warn('play on ready failed', e); }
+            }
+        }
+
+        function onPlayerError(event) {
+            // YouTube error codes: 2 = invalid param, 100 = not found, 101/150 = embedding disabled
+            console.error('YT player error', event.data);
+            if (event.data === 101 || event.data === 150) {
+                alert('This video does not allow embedding. Opening in a new tab instead.');
+                const track = currentMixtape.tracks[currentMixtape.currentTrack];
+                if (track && track.url) window.open(track.url, '_blank');
+            } else if (event.data === 100) {
+                alert('Video not found (may be removed or private).');
+            }
+        }
+
+        
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.ENDED) {
+                nextTrack();
+            }
+        }
+        
+        function togglePlay() {
+            if (!currentMixtape.isInserted) {
+                console.log('No tape inserted yet');
+                return;
+            }
+            if (!player) {
+                console.warn('Player not initialized yet — initializing now');
+                initializePlayer();
+                // give player a moment to initialize; user can press again
+                return;
+            }
+
+            const playBtn = document.getElementById('playBtn');
+
+            // guard: ensure YT instance methods exist
+            if (typeof player.playVideo !== 'function' || typeof player.pauseVideo !== 'function') {
+                console.error('player methods missing', player);
+                return;
+            }
+
+            if (currentMixtape.isPlaying) {
+                player.pauseVideo();
+                playBtn.textContent = '▶';
+                currentMixtape.isPlaying = false;
+            } else {
+                player.playVideo();
+                playBtn.textContent = '⏸';
+                currentMixtape.isPlaying = true;
+            }
+        }
+        
+        function previousTrack() {
+            if (!currentMixtape.isInserted || currentMixtape.tracks.length === 0) return;
+            
+            currentMixtape.currentTrack = 
+                (currentMixtape.currentTrack - 1 + currentMixtape.tracks.length) % currentMixtape.tracks.length;
+            loadCurrentTrack();
+        }
+        
+        function nextTrack() {
+            if (!currentMixtape.isInserted || currentMixtape.tracks.length === 0) return;
+            
+            currentMixtape.currentTrack = 
+                (currentMixtape.currentTrack + 1) % currentMixtape.tracks.length;
+            loadCurrentTrack();
+        }
+        
+        function loadCurrentTrack() {
+            if (!currentMixtape.tracks[currentMixtape.currentTrack]) return;
+
+            const track = currentMixtape.tracks[currentMixtape.currentTrack];
+
+            if (!player || typeof player.loadVideoById !== 'function') {
+                // create or re-initialize player with this track
+                initializePlayer();
+                // once ready, onPlayerReady will handle playing if isPlaying true
+                return;
+            }
+
+            try {
+                player.loadVideoById(track.videoId);
+                if (currentMixtape.isPlaying) {
+                    setTimeout(() => { try { player.playVideo(); } catch(e){} }, 150);
+                }
+            } catch (e) {
+                console.error('loadVideoById failed', e);
+            }
+
+            updateTrackInfo();
+        }
+        function updateTrackInfo() {
+            const track = currentMixtape.tracks[currentMixtape.currentTrack];
+            if (!track) return;
+            
+            document.getElementById('currentTrackTitle').textContent = track.title;
+            document.getElementById('trackCounter').textContent = 
+                `TRACK ${currentMixtape.currentTrack + 1}/${currentMixtape.tracks.length}`;
+            
+            const statusText = document.getElementById('statusText');
+            if (statusText && currentMixtape.isInserted) {
+                statusText.textContent = `TRACK ${currentMixtape.currentTrack + 1}/${currentMixtape.tracks.length}`;
+            }
+        }
+        
+        function generateShareUrl() {
+        // if the share input was removed from DOM, do nothing
+        const shareInput = document.getElementById('shareUrl');
+        if (!shareInput) return;
+
+        try {
+            const payload = encodeURIComponent(JSON.stringify(currentMixtape));
+            const url = `${window.location.origin}${window.location.pathname}?mixtape=${payload}`;
+            shareInput.value = url;
+        } catch (err) {
+            console.error('Could not generate share URL:', err);
+        }
+        }
+
+       function copyShareUrl() {
+        const shareInput = document.getElementById('shareUrl');
+        if (!shareInput) return;
+        shareInput.select();
+        document.execCommand('copy');
+        // optional: show copied toast
+        }
+
+        
+        function playInsertSound() {
+            console.log('Playing insert sound...');
+            const audio = new Audio('https://mewtru.com/mixtape-insert.mp3');
+            audio.volume = 0.5;
+            
+            audio.addEventListener('canplaythrough', () => {
+                console.log('Insert audio loaded successfully');
+            });
+            
+            audio.addEventListener('error', (e) => {
+                console.log('Insert audio error:', e);
+            });
+            
+            audio.play()
+                .then(() => {
+                    console.log('Insert sound playing');
+                })
+                .catch((error) => {
+                    console.log('Insert audio play failed:', error);
+                });
+        }
+        
+        function playEjectSound() {
+            console.log('Playing eject sound...');
+            const audio = new Audio('https://mewtru.com/mixtape-eject.mp3');
+            audio.volume = 0.5;
+            
+            audio.addEventListener('canplaythrough', () => {
+                console.log('Eject audio loaded successfully');
+            });
+            
+            audio.addEventListener('error', (e) => {
+                console.log('Eject audio error:', e);
+            });
+            
+            audio.play()
+                .then(() => {
+                    console.log('Eject sound playing');
+                })
+                .catch((error) => {
+                    console.log('Eject audio play failed:', error);
+                });
+        }
+        
+        function loadSharedMixtape() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const mixtapeData = urlParams.get('mixtape');
+            
+            if (mixtapeData) {
+                try {
+                    const data = JSON.parse(atob(mixtapeData));
+                    currentMixtape.recipient = data.recipient;
+                    currentMixtape.tracks = data.tracks.map(t => ({
+                        videoId: t.videoId,
+                        title: t.title,
+                        url: `https://www.youtube.com/watch?v=${t.videoId}`
+                    }));
+                    currentMixtape.currentTrack = 0;
+                    
+                    generateShareUrl();
+                    
+                    document.getElementById('createSection').style.display = 'none';
+                    document.getElementById('playerSection').style.display = 'block';
+                    
+                    if (!window.YT) {
+                        loadYouTubeAPI();
+                    }
+                } catch (e) {
+                    console.error('Invalid mixtape data');
+                }
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSharedMixtape();
+        });
+
+    (function createGrillDots(){
+        const container = document.getElementById('speakerGrill');
+        if(!container) return;
+        // number of holes (adjust to taste)
+        const total = 40;
+        // find the badge so we can insert dots before it
+        const badge = container.querySelector('.mewtru-badge');
+
+        for(let i=0;i<total;i++){
+            const d = document.createElement('div');
+            d.className = 'speaker-dot';
+            // insert before badge so badge stays at the end
+            container.insertBefore(d, badge);
+        }
+        })();
+    </script>
+    <footer style="
+  text-align: center;
+  font-size: 0.9rem;
+  color: #777;
+  padding: 1rem;
+  margin-top: 2rem;
+  border-top: 1px solid #eee;
+">
+  © 2025 Claire MIXTAPES 
+</footer>
+</body>

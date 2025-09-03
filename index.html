@@ -997,6 +997,22 @@
                 btn.style.display = trackCount > 1 ? 'block' : 'none';
             });
         }
+
+        // ---------- Unicode-safe base64 helpers ----------
+        function base64EncodeUnicode(obj) {
+          const str = JSON.stringify(obj);
+          // encodeURIComponent + map -> safe binary for btoa
+          return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+            function(match, p1) { return String.fromCharCode('0x' + p1); }));
+        }
+        
+        function base64DecodeUnicode(b64) {
+          const binary = atob(b64);
+          const percentEscaped = Array.prototype.map.call(binary, function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join('');
+          return decodeURIComponent(percentEscaped);
+        }
         
         async function createMixtape() {
     const recipientName = document.getElementById('recipientName').value.trim() || 'FOR YOU';
@@ -1272,17 +1288,18 @@
         }
         
         function generateShareUrl() {
-        // if the share input was removed from DOM, do nothing
-        const shareInput = document.getElementById('shareUrl');
-        if (!shareInput) return;
-
-        try {
-            const payload = encodeURIComponent(JSON.stringify(currentMixtape));
-            const url = `${window.location.origin}${window.location.pathname}?mixtape=${payload}`;
+          // ensure share input exists
+          const shareInput = document.getElementById('shareUrl');
+          if (!shareInput) return;
+        
+          try {
+            const payload = base64EncodeUnicode(currentMixtape);
+            // URL-encode the base64 so it is safe for query string
+            const url = `${window.location.origin}${window.location.pathname}?mixtape=${encodeURIComponent(payload)}`;
             shareInput.value = url;
-        } catch (err) {
+          } catch (err) {
             console.error('Could not generate share URL:', err);
-        }
+          }
         }
 
        function copyShareUrl() {
@@ -1339,37 +1356,41 @@
         }
         
         function loadSharedMixtape() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const mixtapeData = urlParams.get('mixtape');
-            
-            if (mixtapeData) {
-                try {
-                    const data = JSON.parse(atob(mixtapeData));
-                    currentMixtape.recipient = data.recipient;
-                    currentMixtape.tracks = data.tracks.map(t => ({
-                        videoId: t.videoId,
-                        title: t.title,
-                        url: `https://www.youtube.com/watch?v=${t.videoId}`
-                    }));
-                    currentMixtape.currentTrack = 0;
-                    
-                    generateShareUrl();
-                    
-                    document.getElementById('createSection').style.display = 'none';
-                    document.getElementById('playerSection').style.display = 'block';
-                    
-                    if (!window.YT) {
-                        loadYouTubeAPI();
-                    }
-                } catch (e) {
-                    console.error('Invalid mixtape data');
-                }
-            }
-        }
+          const urlParams = new URLSearchParams(window.location.search);
+          const mixtapeData = urlParams.get('mixtape');
         
-        document.addEventListener('DOMContentLoaded', () => {
-            loadSharedMixtape();
-        });
+          if (mixtapeData) {
+            try {
+              // decode the URL-encoded base64, then decode the base64 -> JSON
+              const payload = decodeURIComponent(mixtapeData);
+              const json = base64DecodeUnicode(payload);
+              const data = JSON.parse(json);
+        
+              currentMixtape.recipient = data.recipient || 'FOR YOU';
+              currentMixtape.tracks = (data.tracks || []).map(t => ({
+                videoId: t.videoId,
+                title: t.title || `Track ${t.videoId}`,
+                url: t.url || `https://www.youtube.com/watch?v=${t.videoId}`
+              }));
+              currentMixtape.currentTrack = 0;
+        
+              // show player UI and set labels
+              document.getElementById('cassetteLabel').textContent = currentMixtape.recipient;
+              document.getElementById('deckCassetteTitle').textContent = currentMixtape.recipient.toUpperCase();
+        
+              document.getElementById('createSection').style.display = 'none';
+              document.getElementById('playerSection').style.display = 'block';
+        
+              // make sure share input (if present) is filled
+              generateShareUrl();
+        
+              if (!window.YT) loadYouTubeAPI();
+            } catch (e) {
+              console.error('Invalid mixtape data or decode error', e);
+              // fall back to create view; nothing else to do
+            }
+          }
+        }
 
     (function createGrillDots(){
         const container = document.getElementById('speakerGrill');
@@ -1398,3 +1419,4 @@
   © 2025 Claire MIXTAPES 
 </footer>
 </body>
+

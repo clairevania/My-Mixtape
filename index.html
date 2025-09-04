@@ -156,7 +156,6 @@
             border-radius: 0 0 15px 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
-
         
         .input-group {
             margin-bottom: 12px;
@@ -258,8 +257,9 @@
         
         .create-btn {
             width: 100%;
-            font-size: 1.0em;
+            font-size: 1.0 em;
             padding: 3px;
+            margin-top: 0;
         }
         
         .player-section {
@@ -381,6 +381,16 @@
             position: relative;
             overflow: hidden;
         }
+
+        .embed-warning {
+            text-align: center;
+            font-size: 0.9em;
+            color: #8B0000;          /* dark red for warning */
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-style: italic;
+            }
+
         
         .frequency-line {
             position: absolute;
@@ -826,13 +836,13 @@
             <div class="input-group">
                 <label>RECIPIENT NAME:</label>
                 <input type="text" id="recipientName" placeholder="who is this mixtape for?">
-                <small style="color: #8B4513; font-style: italic;">Optional</small>
+                <small style="color: #8B4513; font-style: italic;">Leave blank for "For You"</small>
             </div>
             
             <div class="input-group">
-                <label>SENDER NAME:</label>
+                <label>SENDER NAME (OPTIONAL):</label>
                 <input type="text" id="senderName" placeholder="your name here">
-                <small style="color: #8B4513; font-style: italic;">Optional</small>
+                <small style="color: #8B4513; font-style: italic;">Leave blank for anonymous</small>
             </div>
             <div class="input-group">
                 <label>ADD YOUTUBE LINKS:</label>
@@ -1211,6 +1221,60 @@
             
             document.getElementById('playBtn').textContent = '▶';
         }
+        // Helper: show skip message and move to next playable track (or stop if none)
+    function handleUnplayableCurrentTrack(reasonText = 'SKIPPED') {
+    const trackNum = currentMixtape.currentTrack + 1;
+    const statusText = document.getElementById('statusText');
+    const playBtn = document.getElementById('playBtn');
+    statusText.textContent = `TRACK ${trackNum} ${reasonText}`;
+    console.log(`Track ${trackNum} unplayable — ${reasonText}`);
+
+    // short delay so user can read the message
+    setTimeout(() => {
+        if (currentMixtape.tracks.length > 1) {
+        // advance to the next track and load it
+        isNewTrackStart = true;
+        currentMixtape.currentTrack = (currentMixtape.currentTrack + 1) % currentMixtape.tracks.length;
+        // keep playing state if user wanted playback
+        if (currentMixtape.isPlaying) {
+            playBtn.textContent = '⏸';
+            userIntentToPlay = true;
+        }
+        loadCurrentTrack();
+        } else {
+        // no other tracks
+        statusText.textContent = 'NO PLAYABLE TRACKS';
+        currentMixtape.isPlaying = false;
+        userIntentToPlay = false;
+        playBtn.textContent = '▶';
+        }
+    }, 900);
+    }
+
+// Helper: play and then check after a short delay whether the player actually started.
+// If not, treat the track as unplayable and skip.
+        function playAndMonitorStart() {
+        try { player.playVideo(); } catch (e) { console.warn('playVideo failed synchronously', e); }
+
+        // wait a bit for the player to move into PLAYING (1) or BUFFERING (3)
+        setTimeout(() => {
+            try {
+            if (!player || typeof player.getPlayerState !== 'function') return;
+            const state = player.getPlayerState();
+            // 1 = PLAYING, 3 = BUFFERING
+            if (state !== 1 && state !== 3) {
+                // Not playing -> likely embedding blocked / error — skip it
+                handleUnplayableCurrentTrack('SKIPPED');
+            } else {
+                // playing OK
+                console.log('Playback started (state=', state, ')');
+            }
+            } catch (err) {
+            console.warn('Error while checking player state:', err);
+            }
+        }, 1200); // 2.5s gives enough time for YouTube to respond
+        }
+
         
        function initializePlayer() {
             if (!playerReady || !window.YT) {
@@ -1267,17 +1331,48 @@
         }
 
         function onPlayerError(event) {
-            // YouTube error codes: 2 = invalid param, 100 = not found, 101/150 = embedding disabled
             console.error('YT player error', event.data);
-            if (event.data === 101 || event.data === 150) {
-                alert('This video does not allow embedding. Opening in a new tab instead.');
-                const track = currentMixtape.tracks[currentMixtape.currentTrack];
-                if (track && track.url) window.open(track.url, '_blank');
-            } else if (event.data === 100) {
-                alert('Video not found (may be removed or private).');
+            
+            // Only auto-skip if user actually intended to play
+            if (!userIntentToPlay) {
+                console.log('Error occurred but user hasnt pressed play yet, ignoring auto-skip');
+                return;
+            }
+            
+            if (event.data === 101 || event.data === 150 || event.data === 100 || event.data === 2) {
+                const trackNum = currentMixtape.currentTrack + 1;
+                const statusText = document.getElementById('statusText');
+                const playBtn = document.getElementById('playBtn');
+                
+                // Show skip message
+                let errorMsg = 'SKIPPED';
+                if (event.data === 100) errorMsg = 'NOT FOUND';
+                if (event.data === 2) errorMsg = 'INVALID';
+                
+                statusText.textContent = `TRACK ${trackNum} ${errorMsg}`;
+                
+                console.log(`Track ${trackNum} error ${event.data}, skipping...`);
+                
+                // Skip to next playable track
+                setTimeout(() => {
+                    if (currentMixtape.tracks.length > 1) {
+                        isNewTrackStart = true;
+                        currentMixtape.currentTrack = (currentMixtape.currentTrack + 1) % currentMixtape.tracks.length;
+                        
+                        if (currentMixtape.isPlaying) {
+                            playBtn.textContent = '⏸';
+                        }
+                        
+                        loadCurrentTrack();
+                    } else {
+                        statusText.textContent = `NO PLAYABLE TRACKS`;
+                        currentMixtape.isPlaying = false;
+                        userIntentToPlay = false;
+                        playBtn.textContent = '▶';
+                    }
+                }, 1500);
             }
         }
-
         
         function onPlayerStateChange(event) {
             if (event.data === YT.PlayerState.ENDED) {
@@ -1286,6 +1381,7 @@
         }
         
         let isNewTrackStart = true;
+        let userIntentToPlay = false; // Track if user actually pressed play
        async function togglePlay() {
             if (!currentMixtape.isInserted) {
                 console.log('No tape inserted yet');
@@ -1309,35 +1405,37 @@
                 player.pauseVideo();
                 playBtn.textContent = '▶';
                 currentMixtape.isPlaying = false;
-                isNewTrackStart = false; // Mark as not a new track when paused
+                userIntentToPlay = false; // Reset intent when pausing
+                isNewTrackStart = false;
             } else {
-                // Playing
+                // Playing - set intent flag
+                userIntentToPlay = true; // User actually wants to play
                 playBtn.textContent = '⏸';
                 currentMixtape.isPlaying = true;
                 
                 if (isNewTrackStart) {
-                    // Only play white noise for new tracks
                     try {
-                        await playWhiteNoise(500);
+                        await playWhiteNoise(2000);
                         if (currentMixtape.isPlaying) {
-                            player.playVideo();
+                            playAndMonitorStart();
                         }
                     } catch (error) {
                         console.log('White noise failed, playing track directly:', error);
-                        player.playVideo();
+                        playAndMonitorStart();
                     }
-                    isNewTrackStart = false; // Reset flag after playing white noise
+                    isNewTrackStart = false;
                 } else {
-                    // Just resume without white noise
-                    player.playVideo();
+                    playAndMonitorStart();
                 }
+
             }
         }
         
        function previousTrack() {
             if (!currentMixtape.isInserted || currentMixtape.tracks.length === 0) return;
             
-            isNewTrackStart = true; // Mark as new track
+            userIntentToPlay = currentMixtape.isPlaying; // Maintain current intent
+            isNewTrackStart = true;
             currentMixtape.currentTrack = 
                 (currentMixtape.currentTrack - 1 + currentMixtape.tracks.length) % currentMixtape.tracks.length;
             loadCurrentTrack();
@@ -1346,7 +1444,8 @@
         function nextTrack() {
             if (!currentMixtape.isInserted || currentMixtape.tracks.length === 0) return;
             
-            isNewTrackStart = true; // Mark as new track
+            userIntentToPlay = currentMixtape.isPlaying; // Maintain current intent
+            isNewTrackStart = true;
             currentMixtape.currentTrack = 
                 (currentMixtape.currentTrack + 1) % currentMixtape.tracks.length;
             loadCurrentTrack();
@@ -1363,12 +1462,22 @@
 
             try {
                 player.loadVideoById(track.videoId);
+                
+                // If we're supposed to be playing, start playback after loading
                 if (currentMixtape.isPlaying) {
-                    // Play white noise before new track
-                    await playWhiteNoise(500); // Shorter noise for track changes
-                    if (currentMixtape.isPlaying) {
+                    if (isNewTrackStart) {
+                        // Play white noise for new tracks
+                        await playWhiteNoise(1500);
+                        if (currentMixtape.isPlaying) {
+                            setTimeout(() => { 
+                                try { player.playVideo(); } catch(e){} 
+                            }, 150);
+                        }
+                        isNewTrackStart = false;
+                    } else {
+                        // Just start playing without white noise
                         setTimeout(() => { 
-                            try { player.playVideo(); } catch(e){} 
+                            try { playAndMonitorStart(); } catch (e) { console.warn(e); }
                         }, 150);
                     }
                 }
@@ -1556,6 +1665,9 @@
             loadSharedMixtape();
         });
     </script>
+    <div class="embed-warning">
+        <p>⚠️ Some YouTube videos might be skipped because embedding is not allowed.</p>
+    </div>
     <footer style="
   text-align: center;
   font-size: 0.9rem;
@@ -1567,7 +1679,3 @@
   © 2025 Claire MIXTAPES 
 </footer>
 </body>
-
-
-
-

@@ -65,6 +65,8 @@
             position: relative;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
         }
+
+      
         
         .cassette-label {
             background: white;
@@ -75,8 +77,55 @@
             color: black;
             font-weight: bold;
             font-size: 0.9em;
+            position: relative;
+            line-height: 1.4;
+            background-image: repeating-linear-gradient(
+                transparent,
+                transparent 12px,
+                #d0d0d0 12px,
+                #d0d0d0 13px
+            );
         }
-        
+
+        .deck-cassette-label {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            right: 16px;
+            height: 56px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 2px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            font-size: 0.8em;
+            line-height: 1,3;
+            background-image: repeating-linear-gradient(
+                transparent,
+                transparent 12px,
+                #d0d0d0 12px,
+                #d0d0d0 13px
+            );
+        }
+
+        .cassette-label,
+        .deck-cassette-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 8px;
+        }
+
+        .cassette-label br + *,
+        .deck-cassette-label br + * {
+            margin-top: 8px;
+        }
+       
+                
         .cassette-body {
             display: flex;
             justify-content: space-between;
@@ -763,7 +812,7 @@
         <div class="header">
             <h1>Make a Mixtape</h1>
             <div class="cassette">
-                <div class="cassette-label" id="cassetteLabel">FOR YOU</div>
+                <div class="cassette-label" id="cassetteLabel">To:<br>From:</div>
                 <div class="cassette-body">
                     <div class="reel"></div>
                     <div class="tape-window"></div>
@@ -774,11 +823,16 @@
         
         <div id="createSection" class="form-section">
             <div class="input-group">
-                <label>RECIPIENT NAME (OPTIONAL):</label>
+                <label>RECIPIENT NAME:</label>
                 <input type="text" id="recipientName" placeholder="who is this mixtape for?">
                 <small style="color: #8B4513; font-style: italic;">Leave blank for "For You"</small>
             </div>
             
+            <div class="input-group">
+                <label>SENDER NAME (OPTIONAL):</label>
+                <input type="text" id="senderName" placeholder="your name here">
+                <small style="color: #8B4513; font-style: italic;">Leave blank for anonymous</small>
+            </div>
             <div class="input-group">
                 <label>ADD YOUTUBE LINKS:</label>
                 <div id="tracksList">
@@ -842,7 +896,7 @@
                 <div class="cassette-compartment" id="cassetteCompartment">
                     <div class="compartment-top"></div>
                     <div id="cassetteInDeck" class="cassette cassette-in-deck" style="display: none;">
-    <div class="cassette-label" id="deckCassetteTitle">FOR YOU</div>
+    <div class="cassette-label" id="deckCassetteTitle">To:<br>From:</div>
     <div class="cassette-body">
         <div class="reel"></div>
         <div class="tape-window"></div>
@@ -895,8 +949,9 @@
     </div>
 
     <script>
-        let currentMixtape = {
+       let currentMixtape = {
             recipient: '',
+            sender: '', // ADD THIS LINE
             tracks: [],
             currentTrack: 0,
             isPlaying: false,
@@ -974,6 +1029,34 @@
             
             trackItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
+
+        function playWhiteNoise(duration = 500) {
+            return new Promise((resolve) => {
+                // Create audio context for white noise
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const bufferSize = audioContext.sampleRate * (duration / 1000);
+                const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+                const data = buffer.getChannelData(0);
+                
+                // Generate white noise
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * 0.1; // Low volume white noise
+                }
+                
+                const source = audioContext.createBufferSource();
+                const gainNode = audioContext.createGain();
+                
+                source.buffer = buffer;
+                source.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                gainNode.gain.value = 0.3; // Adjust volume
+                
+                source.start();
+                source.onended = resolve;
+                
+                setTimeout(resolve, duration); // Fallback timeout
+            });
+        }
         
         function removeTrack(button) {
             if (trackCount <= 1) return;
@@ -1003,47 +1086,57 @@
         }
         
         async function createMixtape() {
-    const recipientName = document.getElementById('recipientName').value.trim() || 'FOR YOU';
-    const trackInputs = document.querySelectorAll('.track-input');
-    const tracks = [];
-    
-    for (let input of trackInputs) {
-        if (input.value.trim()) {
-            const videoId = extractVideoId(input.value.trim());
-            if (videoId) {
-                tracks.push({
-                    videoId: videoId,
-                    url: input.value.trim(),
-                    title: `Track ${tracks.length + 1}`
-                });
+            const recipientName = document.getElementById('recipientName').value.trim() || 'You';
+            const senderName = document.getElementById('senderName').value.trim(); // NEW LINE
+            const trackInputs = document.querySelectorAll('.track-input');
+            const tracks = [];
+            
+            // Keep the existing track processing code exactly as it was
+            for (let input of trackInputs) {
+                if (input.value.trim()) {
+                    const videoId = extractVideoId(input.value.trim());
+                    if (videoId) {
+                        tracks.push({
+                            videoId: videoId,
+                            url: input.value.trim(),
+                            title: `Track ${tracks.length + 1}`
+                        });
+                    }
+                }
+            }
+            
+            if (tracks.length === 0) {
+                alert('Please add at least one valid YouTube URL');
+                return;
+            }
+            
+            currentMixtape.recipient = recipientName;
+            currentMixtape.sender = senderName; // NEW LINE
+            currentMixtape.tracks = tracks;
+            currentMixtape.currentTrack = 0;
+            
+            // Update labels with To/From format
+            const headerLabel = document.getElementById('cassetteLabel');
+            const deckLabel = document.getElementById('deckCassetteTitle');
+            
+            if (senderName) {
+                headerLabel.innerHTML = `To: ${recipientName}<br>From: ${senderName}`;
+                deckLabel.innerHTML = `To: ${recipientName}<br>From: ${senderName}`;
+            } else {
+                headerLabel.innerHTML = `To: ${recipientName}<br>From: Anonymous`;
+                deckLabel.innerHTML = `To: ${recipientName}<br>From: Anonymous`;
+            }
+            
+            generateShareUrl();
+
+            document.querySelector('.header').classList.add('hidden');
+            document.getElementById('createSection').style.display = 'none';
+            document.getElementById('playerSection').style.display = 'block';
+            
+            if (!window.YT) {
+                loadYouTubeAPI();
             }
         }
-    }
-    
-    if (tracks.length === 0) {
-        alert('Please add at least one valid YouTube URL');
-        return;
-    }
-    
-    currentMixtape.recipient = recipientName;
-    currentMixtape.tracks = tracks;
-    currentMixtape.currentTrack = 0;
-    
-    document.getElementById('cassetteLabel').textContent = recipientName;
-    document.getElementById('deckCassetteTitle').textContent = recipientName.toUpperCase();
-    
-    generateShareUrl();
-
-    // ← ADD THIS LINE to hide the brown header after creating the mixtape
-    document.querySelector('.header').classList.add('hidden');
-    
-    document.getElementById('createSection').style.display = 'none';
-    document.getElementById('playerSection').style.display = 'block';
-    
-    if (!window.YT) {
-        loadYouTubeAPI();
-    }
-}
 
         
         function insertTape() {
@@ -1075,7 +1168,7 @@
 
             prevBtn.disabled = false;
             nextBtn.disabled = false;
-
+            isNewTrackStart = true;
             currentMixtape.isInserted = true;
             updateTrackInfo();
 
@@ -1191,7 +1284,8 @@
             }
         }
         
-        function togglePlay() {
+        let isNewTrackStart = true;
+       async function togglePlay() {
             if (!currentMixtape.isInserted) {
                 console.log('No tape inserted yet');
                 return;
@@ -1199,61 +1293,83 @@
             if (!player) {
                 console.warn('Player not initialized yet — initializing now');
                 initializePlayer();
-                // give player a moment to initialize; user can press again
                 return;
             }
 
             const playBtn = document.getElementById('playBtn');
 
-            // guard: ensure YT instance methods exist
             if (typeof player.playVideo !== 'function' || typeof player.pauseVideo !== 'function') {
                 console.error('player methods missing', player);
                 return;
             }
 
             if (currentMixtape.isPlaying) {
+                // Pausing
                 player.pauseVideo();
                 playBtn.textContent = '▶';
                 currentMixtape.isPlaying = false;
+                isNewTrackStart = false; // Mark as not a new track when paused
             } else {
-                player.playVideo();
+                // Playing
                 playBtn.textContent = '⏸';
                 currentMixtape.isPlaying = true;
+                
+                if (isNewTrackStart) {
+                    // Only play white noise for new tracks
+                    try {
+                        await playWhiteNoise(500);
+                        if (currentMixtape.isPlaying) {
+                            player.playVideo();
+                        }
+                    } catch (error) {
+                        console.log('White noise failed, playing track directly:', error);
+                        player.playVideo();
+                    }
+                    isNewTrackStart = false; // Reset flag after playing white noise
+                } else {
+                    // Just resume without white noise
+                    player.playVideo();
+                }
             }
         }
         
-        function previousTrack() {
+       function previousTrack() {
             if (!currentMixtape.isInserted || currentMixtape.tracks.length === 0) return;
             
+            isNewTrackStart = true; // Mark as new track
             currentMixtape.currentTrack = 
                 (currentMixtape.currentTrack - 1 + currentMixtape.tracks.length) % currentMixtape.tracks.length;
             loadCurrentTrack();
         }
-        
+
         function nextTrack() {
             if (!currentMixtape.isInserted || currentMixtape.tracks.length === 0) return;
             
+            isNewTrackStart = true; // Mark as new track
             currentMixtape.currentTrack = 
                 (currentMixtape.currentTrack + 1) % currentMixtape.tracks.length;
             loadCurrentTrack();
         }
-        
-        function loadCurrentTrack() {
+        async function loadCurrentTrack() {
             if (!currentMixtape.tracks[currentMixtape.currentTrack]) return;
 
             const track = currentMixtape.tracks[currentMixtape.currentTrack];
 
             if (!player || typeof player.loadVideoById !== 'function') {
-                // create or re-initialize player with this track
                 initializePlayer();
-                // once ready, onPlayerReady will handle playing if isPlaying true
                 return;
             }
 
             try {
                 player.loadVideoById(track.videoId);
                 if (currentMixtape.isPlaying) {
-                    setTimeout(() => { try { player.playVideo(); } catch(e){} }, 150);
+                    // Play white noise before new track
+                    await playWhiteNoise(500); // Shorter noise for track changes
+                    if (currentMixtape.isPlaying) {
+                        setTimeout(() => { 
+                            try { player.playVideo(); } catch(e){} 
+                        }, 150);
+                    }
                 }
             } catch (e) {
                 console.error('loadVideoById failed', e);
@@ -1280,16 +1396,15 @@
             if (!shareInput) return;
 
             try {
-                // Create a clean object with just the data we need
                 const shareData = {
                     recipient: currentMixtape.recipient,
+                    sender: currentMixtape.sender, // ADD THIS LINE
                     tracks: currentMixtape.tracks.map(track => ({
                         videoId: track.videoId,
                         title: track.title
                     }))
                 };
                 
-                // Use btoa to encode (not encodeURIComponent of JSON)
                 const encoded = btoa(JSON.stringify(shareData));
                 const url = `${window.location.origin}${window.location.pathname}?mixtape=${encoded}`;
                 shareInput.value = url;
@@ -1379,7 +1494,8 @@
             if (mixtapeData) {
                 try {
                     const data = JSON.parse(atob(mixtapeData));
-                    currentMixtape.recipient = data.recipient || 'FOR YOU';
+                    currentMixtape.recipient = data.recipient || 'YOU';
+                    currentMixtape.sender = data.sender || '';
                     currentMixtape.tracks = data.tracks.map(t => ({
                         videoId: t.videoId,
                         title: t.title || `Track ${data.tracks.indexOf(t) + 1}`,
@@ -1388,8 +1504,16 @@
                     currentMixtape.currentTrack = 0;
                     
                     // Update the cassette labels
-                    document.getElementById('cassetteLabel').textContent = currentMixtape.recipient;
-                    document.getElementById('deckCassetteTitle').textContent = currentMixtape.recipient.toUpperCase();
+                    const headerLabel = document.getElementById('cassetteLabel');
+                    const deckLabel = document.getElementById('deckCassetteTitle');
+
+                    if (currentMixtape.sender) {
+                        headerLabel.innerHTML = `To: ${currentMixtape.recipient}<br>From: ${currentMixtape.sender}`;
+                        deckLabel.innerHTML = `To: ${currentMixtape.recipient}<br>From: ${currentMixtape.sender}`;
+                    } else {
+                        headerLabel.innerHTML = `To: ${currentMixtape.recipient}<br>From: Anonymous`;
+                        deckLabel.innerHTML = `To: ${currentMixtape.recipient}<br>From: Anonymous`;
+                    }
                     
                     // Hide the creation form and show the player
                     document.querySelector('.header').classList.add('hidden');
